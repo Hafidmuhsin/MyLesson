@@ -1,0 +1,6 @@
+{
+  "name": "TeacherPlan",
+  "description": "Structured lesson plans, subject topic coverage, AI syllabus generator, attachments, and student assignment tracking by roll number.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
