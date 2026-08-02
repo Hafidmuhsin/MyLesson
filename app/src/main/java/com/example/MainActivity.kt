@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.view.WindowManager
+import android.content.Intent
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.security.AppSecurityManager
@@ -34,6 +35,7 @@ import com.example.ui.screens.TimetableScreen
 import com.example.ui.screens.TopicDetailScreen
 import com.example.ui.theme.TeacherPlanTheme
 import com.example.ui.viewmodel.TeacherViewModel
+import com.example.util.GoogleDriveManager
 
 class MainActivity : ComponentActivity() {
 
@@ -58,6 +60,24 @@ class MainActivity : ComponentActivity() {
                 ) {
                     TeacherPlanApp(viewModel = viewModel)
                 }
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == GoogleDriveManager.REQ_SIGN_IN) {
+            val account = GoogleDriveManager.getSignedInAccountFromIntent(data)
+            if (account != null) {
+                try {
+                    val drive = GoogleDriveManager.createDriveService(this, account)
+                    viewModel.setDriveService(drive)
+                    Toast.makeText(this, "Connected to Google Drive", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Failed to initialize Drive: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                Toast.makeText(this, "Drive sign-in canceled or failed", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -106,6 +126,9 @@ fun TeacherPlanApp(viewModel: TeacherViewModel) {
                 },
                 onAddSubject = { name, grade, color, rolls, desc ->
                     viewModel.addSubject(name, grade, color, rolls, desc)
+                },
+                onConnectDrive = {
+                    startActivityForResult(GoogleDriveManager.getSignInIntent(this@MainActivity), GoogleDriveManager.REQ_SIGN_IN)
                 }
             )
         }

@@ -76,7 +76,8 @@ fun DashboardScreen(
     onSelectSubject: (Long) -> Unit,
     onOpenAiPlanner: () -> Unit,
     onOpenTimetable: () -> Unit,
-    onAddSubject: (String, String, String, Int, String) -> Unit
+    onAddSubject: (String, String, String, Int, String) -> Unit,
+    onConnectDrive: () -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showSecurityDialog by remember { mutableStateOf(false) }
@@ -130,7 +131,18 @@ fun DashboardScreen(
                             tint = EmeraldSuccess
                         )
                     }
+                    IconButton(
+                        onClick = onConnectDrive,
+                        modifier = Modifier.testTag("connect_drive_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Storage,
+                            contentDescription = "Connect Google Drive",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
+
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
