@@ -63,6 +63,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Shield
+import com.example.ui.components.SecuritySettingsDialog
 import com.example.data.entity.SubjectEntity
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
@@ -73,11 +75,11 @@ fun DashboardScreen(
     subjects: List<SubjectEntity>,
     onSelectSubject: (Long) -> Unit,
     onOpenAiPlanner: () -> Unit,
-    onOpenStorageBackup: () -> Unit,
     onOpenTimetable: () -> Unit,
     onAddSubject: (String, String, String, Int, String) -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var showSecurityDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -109,13 +111,13 @@ fun DashboardScreen(
                         )
                     }
                     IconButton(
-                        onClick = onOpenStorageBackup,
-                        modifier = Modifier.testTag("storage_backup_button")
+                        onClick = { showSecurityDialog = true },
+                        modifier = Modifier.testTag("security_button")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Storage,
-                            contentDescription = "Storage Access & Export",
-                            tint = MaterialTheme.colorScheme.primary
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = "Security Center",
+                            tint = Color(0xFF10B981)
                         )
                     }
                     IconButton(
@@ -161,7 +163,7 @@ fun DashboardScreen(
                     subjectsCount = subjects.size,
                     onOpenTimetable = onOpenTimetable,
                     onOpenAi = onOpenAiPlanner,
-                    onOpenStorage = onOpenStorageBackup
+                    onOpenSecurity = { showSecurityDialog = true }
                 )
             }
 
@@ -217,6 +219,12 @@ fun DashboardScreen(
             }
         )
     }
+
+    if (showSecurityDialog) {
+        SecuritySettingsDialog(
+            onDismiss = { showSecurityDialog = false }
+        )
+    }
 }
 
 @Composable
@@ -224,7 +232,7 @@ private fun HeroWelcomeBanner(
     subjectsCount: Int,
     onOpenTimetable: () -> Unit,
     onOpenAi: () -> Unit,
-    onOpenStorage: () -> Unit
+    onOpenSecurity: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -321,22 +329,22 @@ private fun HeroWelcomeBanner(
                     }
 
                     Button(
-                        onClick = onOpenStorage,
+                        onClick = onOpenSecurity,
                         modifier = Modifier
                             .weight(1f)
-                            .testTag("hero_storage_button"),
+                            .testTag("hero_security_button"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
+                            containerColor = Color(0xFF059669)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Storage,
+                            imageVector = Icons.Default.Shield,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Storage / PDF", fontSize = 12.sp, maxLines = 1)
+                        Text("100% Security", fontSize = 12.sp, maxLines = 1)
                     }
                 }
             }

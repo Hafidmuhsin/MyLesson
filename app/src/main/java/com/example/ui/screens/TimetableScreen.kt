@@ -84,7 +84,7 @@ import com.example.data.entity.TimetableSlotEntity
 import kotlinx.coroutines.launch
 
 object TimetableConstants {
-    val FULL_DAYS = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+    val FULL_DAYS = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
     
     val TIME_SLOTS = listOf(
         "09:00 AM - 10:00 AM",
@@ -184,7 +184,7 @@ fun TimetableScreen(
                             }
                         }
                         Text(
-                            text = "9:00 AM – 4:00 PM • Full Days Schedule",
+                            text = "9:00 AM – 4:00 PM • Monday to Friday",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

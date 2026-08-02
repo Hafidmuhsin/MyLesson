@@ -14,6 +14,7 @@ import com.example.data.entity.TimetableSlotEntity
 import com.example.data.entity.TopicEntity
 import com.example.data.entity.TopicSourceEntity
 import com.example.data.repository.TeacherRepository
+import com.example.security.AppSecurityManager
 import com.example.util.TeacherStorageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -82,16 +83,17 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     // --- Subject Operations ---
     fun addSubject(name: String, gradeClass: String, colorHex: String, totalRolls: Int, description: String) {
         viewModelScope.launch {
-            if (name.isBlank()) {
+            val cleanName = AppSecurityManager.sanitizeInput(name, 100)
+            if (cleanName.isBlank()) {
                 _userMessage.value = "Subject name cannot be empty"
                 return@launch
             }
             val subject = SubjectEntity(
-                name = name.trim(),
-                gradeClass = gradeClass.trim().ifEmpty { "General" },
+                name = cleanName,
+                gradeClass = AppSecurityManager.sanitizeInput(gradeClass, 50).ifEmpty { "General" },
                 colorHex = colorHex,
                 totalRolls = if (totalRolls > 0) totalRolls else 60,
-                description = description.trim()
+                description = AppSecurityManager.sanitizeInput(description, 500)
             )
             val id = repository.insertSubject(subject)
             _selectedSubjectId.value = id
@@ -101,7 +103,12 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 
     fun updateSubject(subject: SubjectEntity) {
         viewModelScope.launch {
-            repository.updateSubject(subject)
+            val sanitized = subject.copy(
+                name = AppSecurityManager.sanitizeInput(subject.name, 100),
+                gradeClass = AppSecurityManager.sanitizeInput(subject.gradeClass, 50),
+                description = AppSecurityManager.sanitizeInput(subject.description, 500)
+            )
+            repository.updateSubject(sanitized)
             _userMessage.value = "Subject updated"
         }
     }
@@ -127,23 +134,24 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         notes: String
     ) {
         viewModelScope.launch {
-            if (topicName.isBlank()) {
+            val cleanTopicName = AppSecurityManager.sanitizeInput(topicName, 150)
+            if (cleanTopicName.isBlank()) {
                 _userMessage.value = "Topic name cannot be empty"
                 return@launch
             }
             val topic = TopicEntity(
                 subjectId = subjectId,
-                unitTitle = unitTitle.trim().ifEmpty { "General Unit" },
-                topicName = topicName.trim(),
+                unitTitle = AppSecurityManager.sanitizeInput(unitTitle, 100).ifEmpty { "General Unit" },
+                topicName = cleanTopicName,
                 estimatedHours = estimatedHours,
-                targetDate = targetDate.trim(),
+                targetDate = AppSecurityManager.sanitizeInput(targetDate, 50),
                 isCovered = false,
                 coveragePercentage = 0,
-                learningObjectives = learningObjectives.trim(),
-                notes = notes.trim()
+                learningObjectives = AppSecurityManager.sanitizeInput(learningObjectives, 1000),
+                notes = AppSecurityManager.sanitizeInput(notes, 1000)
             )
             repository.insertTopic(topic)
-            _userMessage.value = "Topic '$topicName' added!"
+            _userMessage.value = "Topic '$cleanTopicName' added!"
         }
     }
 
@@ -174,15 +182,17 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     // --- Topic Sources ---
     fun addTopicSource(topicId: Long, title: String, sourceType: String, uriOrContent: String) {
         viewModelScope.launch {
-            if (title.isBlank() || uriOrContent.isBlank()) {
+            val cleanTitle = AppSecurityManager.sanitizeInput(title, 100)
+            val cleanContent = AppSecurityManager.sanitizeInput(uriOrContent, 1000)
+            if (cleanTitle.isBlank() || cleanContent.isBlank()) {
                 _userMessage.value = "Title and link/file content are required"
                 return@launch
             }
             val source = TopicSourceEntity(
                 topicId = topicId,
-                title = title.trim(),
+                title = cleanTitle,
                 sourceType = sourceType,
-                uriOrContent = uriOrContent.trim()
+                uriOrContent = cleanContent
             )
             repository.insertSource(source)
             _userMessage.value = "Source attachment added!"
@@ -199,15 +209,16 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     // --- Assignment & Student Roll Submissions ---
     fun createAssignment(subjectId: Long, title: String, description: String, dueDate: String, maxMarks: Int, totalRolls: Int = 60) {
         viewModelScope.launch {
-            if (title.isBlank()) {
+            val cleanTitle = AppSecurityManager.sanitizeInput(title, 120)
+            if (cleanTitle.isBlank()) {
                 _userMessage.value = "Assignment title is required"
                 return@launch
             }
             val assignment = AssignmentEntity(
                 subjectId = subjectId,
-                title = title.trim(),
-                description = description.trim(),
-                dueDate = dueDate.trim(),
+                title = cleanTitle,
+                description = AppSecurityManager.sanitizeInput(description, 500),
+                dueDate = AppSecurityManager.sanitizeInput(dueDate, 50),
                 maxMarks = if (maxMarks > 0) maxMarks else 100
             )
             repository.createAssignmentWithRolls(assignment, totalRolls)

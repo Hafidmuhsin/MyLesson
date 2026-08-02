@@ -21,10 +21,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import android.view.WindowManager
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.example.security.AppSecurityManager
+import com.example.ui.components.AppLockOverlay
 import com.example.ui.screens.AiSyllabusGeneratorScreen
 import com.example.ui.screens.AssignmentRollScreen
 import com.example.ui.screens.DashboardScreen
-import com.example.ui.screens.StorageBackupScreen
 import com.example.ui.screens.SubjectDetailScreen
 import com.example.ui.screens.TimetableScreen
 import com.example.ui.screens.TopicDetailScreen
@@ -38,6 +42,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        if (AppSecurityManager.isFlagSecureEnabled(this)) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+        }
 
         setContent {
             TeacherPlanTheme {
@@ -62,12 +73,17 @@ fun TeacherPlanApp(viewModel: TeacherViewModel) {
     val userMessage by viewModel.userMessage.collectAsStateWithLifecycle()
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    var isAppUnlocked by remember { mutableStateOf(!AppSecurityManager.isPinEnabled(context)) }
 
     LaunchedEffect(userMessage) {
         userMessage?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             viewModel.clearUserMessage()
         }
+    }
+
+    if (!isAppUnlocked && AppSecurityManager.isPinEnabled(context)) {
+        AppLockOverlay(onUnlocked = { isAppUnlocked = true })
     }
 
     NavHost(
@@ -84,9 +100,6 @@ fun TeacherPlanApp(viewModel: TeacherViewModel) {
                 },
                 onOpenAiPlanner = {
                     navController.navigate("ai_planner")
-                },
-                onOpenStorageBackup = {
-                    navController.navigate("storage_backup")
                 },
                 onOpenTimetable = {
                     navController.navigate("timetable")
@@ -245,21 +258,7 @@ fun TeacherPlanApp(viewModel: TeacherViewModel) {
             )
         }
 
-        // 6. Storage & Backup Screen
-        composable("storage_backup") {
-            StorageBackupScreen(
-                subjects = subjects,
-                onBack = { navController.popBackStack() },
-                onReadDocument = { uri, onRead ->
-                    viewModel.readDocumentContentFromUri(uri, onRead)
-                },
-                onShowMessage = { msg ->
-                    viewModel.showMessage(msg)
-                }
-            )
-        }
-
-        // 7. My Timetable Screen
+        // 6. My Timetable Screen
         composable("timetable") {
             TimetableScreen(
                 subjects = subjects,
