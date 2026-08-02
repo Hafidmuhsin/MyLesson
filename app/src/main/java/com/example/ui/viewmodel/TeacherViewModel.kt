@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.google.api.services.drive.Drive
 
 sealed interface AiGeneratorUiState {
     object Idle : AiGeneratorUiState
@@ -38,6 +39,14 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 
     private val db = AppDatabase.getInstance(application)
     val repository = TeacherRepository(db)
+
+    // Optional: hold a Drive service reference for simple demos. Avoid placing long-lived credentials here in production.
+    private var driveService: Drive? = null
+    fun setDriveService(drive: Drive) {
+        this.driveService = drive
+    }
+
+    fun getDriveService(): Drive? = driveService
 
     val subjects: StateFlow<List<SubjectEntity>> = repository.allSubjects
         .stateIn(

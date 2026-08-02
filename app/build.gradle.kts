@@ -113,6 +113,14 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
+
+  // Google Sign-In for Android (used to authorize Drive access)
+  implementation("com.google.android.gms:play-services-auth:20.6.0")
+
+  // Google API Client for Android + Drive REST bindings
+  implementation("com.google.api-client:google-api-client-android:1.34.2")
+  implementation("com.google.apis:google-api-services-drive:v3-rev20230810-1.32.1")
+
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
