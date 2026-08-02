@@ -15,12 +15,17 @@ import java.util.Locale
 class TeacherRepository(private val db: AppDatabase) {
 
     val allSubjects: Flow<List<SubjectEntity>> = db.subjectDao().getAllSubjects()
+    val allTopics: Flow<List<TopicEntity>> = db.topicDao().getAllTopics()
 
     fun getSubjectById(subjectId: Long): Flow<SubjectEntity?> = db.subjectDao().getSubjectById(subjectId)
+
+    suspend fun getSubjectByIdOneShot(subjectId: Long): SubjectEntity? = db.subjectDao().getSubjectByIdOneShot(subjectId)
 
     fun getTopicsForSubject(subjectId: Long): Flow<List<TopicEntity>> = db.topicDao().getTopicsForSubject(subjectId)
 
     fun getTopicById(topicId: Long): Flow<TopicEntity?> = db.topicDao().getTopicById(topicId)
+
+    suspend fun getTopicByIdOneShot(topicId: Long): TopicEntity? = db.topicDao().getTopicByIdOneShot(topicId)
 
     fun getSourcesForTopic(topicId: Long): Flow<List<TopicSourceEntity>> = db.topicSourceDao().getSourcesForTopic(topicId)
 

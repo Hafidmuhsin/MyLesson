@@ -18,8 +18,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
@@ -28,8 +29,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.outlined.Assignment
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.FolderShared
+import com.example.util.GoogleDriveManager
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -69,6 +75,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.entity.AssignmentEntity
 import com.example.data.entity.SubjectEntity
 import com.example.data.entity.TopicEntity
+import com.example.ui.components.GlassCard
+import com.example.ui.components.GlassmorphicCanvas
+import com.example.ui.theme.CollegeBlue
+import com.example.ui.theme.CollegeNavy
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 
@@ -92,169 +102,190 @@ fun SubjectDetailScreen(
     var showAddAssignmentDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    val accentColor = remember(subject.colorHex) {
-        try {
-            Color(android.graphics.Color.parseColor(subject.colorHex))
-        } catch (e: Exception) {
-            IndigoPrimary
-        }
+    val accentColor = try {
+        Color(android.graphics.Color.parseColor(subject.colorHex))
+    } catch (e: Exception) {
+        CollegeBlue
     }
 
     val coveredCount = topics.count { it.isCovered }
     val totalTopics = topics.size
-    val overallProgress = if (totalTopics > 0) (coveredCount.toFloat() / totalTopics.toFloat()) else 0f
+    val overallProgress = if (totalTopics > 0) coveredCount.toFloat() / totalTopics else 0f
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = subject.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "${subject.gradeClass} • ${subject.totalRolls} Students",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showDeleteConfirmDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Subject",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+    GlassmorphicCanvas {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = subject.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = CollegeNavy
+                            )
+                            Text(
+                                text = "${subject.gradeClass} • Enrolled: Roll 1 to ${subject.totalRolls}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        val context = LocalContext.current
+                        IconButton(
+                            onClick = {
+                                val url = GoogleDriveManager.generateClassroomFolderUrl(subject.id, subject.name, subject.gradeClass)
+                                GoogleDriveManager.syncSubjectToClassroomDrive(context, subject.id, subject.name, subject.gradeClass)
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.testTag("open_subject_drive_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Cloud,
+                                contentDescription = "Course Drive Folder",
+                                tint = CollegeBlue
+                            )
+                        }
+                        IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Course",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White.copy(alpha = 0.85f)
+                    )
                 )
-            )
-        },
-        floatingActionButton = {
-            when (selectedTab) {
-                0 -> {
-                    FloatingActionButton(
+            },
+            floatingActionButton = {
+                when (selectedTab) {
+                    0 -> FloatingActionButton(
                         onClick = { showAddTopicDialog = true },
-                        containerColor = accentColor,
+                        containerColor = CollegeBlue,
                         contentColor = Color.White,
                         modifier = Modifier.testTag("add_topic_fab")
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Topic")
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Lecture Topic")
                     }
-                }
-                1 -> {
-                    FloatingActionButton(
+                    1 -> FloatingActionButton(
                         onClick = { showAddAssignmentDialog = true },
-                        containerColor = accentColor,
+                        containerColor = CollegeBlue,
                         contentColor = Color.White,
                         modifier = Modifier.testTag("add_assignment_fab")
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Create Assignment")
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Create Coursework")
                     }
                 }
             }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Subject Progress Header
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Topics Progress: $coveredCount / $totalTopics Covered (${(overallProgress * 100).toInt()}%)",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = accentColor
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = accentColor.copy(alpha = 0.15f)
+                // Course Progress Banner
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    containerColor = Color.White.copy(alpha = 0.88f)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${subject.totalRolls} Rolls",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = accentColor,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                text = "Syllabus Completed: $coveredCount / $totalTopics Lecture Modules (${(overallProgress * 100).toInt()}%)",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = CollegeNavy
                             )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = CollegeBlue.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    text = "${subject.totalRolls} Students Enrolled",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CollegeBlue,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    LinearProgressIndicator(
-                        progress = { overallProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = accentColor,
-                        trackColor = accentColor.copy(alpha = 0.2f)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { overallProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = CollegeBlue,
+                            trackColor = CollegeBlue.copy(alpha = 0.15f)
+                        )
+                    }
+                }
+
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.White.copy(alpha = 0.80f),
+                    contentColor = CollegeBlue
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Syllabus ($totalTopics)", fontWeight = FontWeight.Bold) },
+                        icon = { Icon(imageVector = Icons.Outlined.Book, contentDescription = null) },
+                        modifier = Modifier.testTag("topics_tab")
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Coursework (${assignments.size})", fontWeight = FontWeight.Bold) },
+                        icon = { Icon(imageVector = Icons.AutoMirrored.Outlined.Assignment, contentDescription = null) },
+                        modifier = Modifier.testTag("assignments_tab")
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        text = { Text("AI Syllabus", fontWeight = FontWeight.Bold) },
+                        icon = { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = EmeraldSuccess) },
+                        modifier = Modifier.testTag("ai_tab")
                     )
                 }
-            }
 
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("Topics Coverage ($totalTopics)") },
-                    icon = { Icon(imageVector = Icons.Outlined.Book, contentDescription = null) },
-                    modifier = Modifier.testTag("topics_tab")
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Assignments (${assignments.size})") },
-                    icon = { Icon(imageVector = Icons.Outlined.Assignment, contentDescription = null) },
-                    modifier = Modifier.testTag("assignments_tab")
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    text = { Text("AI Syllabus") },
-                    icon = { Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = EmeraldSuccess) },
-                    modifier = Modifier.testTag("ai_tab")
-                )
-            }
-
-            when (selectedTab) {
-                0 -> TopicsTabContent(
-                    topics = topics,
-                    accentColor = accentColor,
-                    onTopicClick = onTopicClick,
-                    onToggleCovered = onToggleTopicCovered,
-                    onAddTopicClick = { showAddTopicDialog = true }
-                )
-                1 -> AssignmentsTabContent(
-                    assignments = assignments,
-                    accentColor = accentColor,
-                    onAssignmentClick = onAssignmentClick,
-                    onCreateAssignmentClick = { showAddAssignmentDialog = true }
-                )
-                2 -> AiSyllabusTabContent(
-                    subject = subject,
-                    onOpenAiSyllabus = onOpenAiSyllabus
-                )
+                when (selectedTab) {
+                    0 -> TopicsTabContent(
+                        topics = topics,
+                        accentColor = accentColor,
+                        onTopicClick = onTopicClick,
+                        onToggleCovered = onToggleTopicCovered,
+                        onAddTopicClick = { showAddTopicDialog = true }
+                    )
+                    1 -> AssignmentsTabContent(
+                        assignments = assignments,
+                        accentColor = accentColor,
+                        onAssignmentClick = onAssignmentClick,
+                        onCreateAssignmentClick = { showAddAssignmentDialog = true }
+                    )
+                    2 -> AiSyllabusTabContent(
+                        subject = subject,
+                        onOpenAiSyllabus = onOpenAiSyllabus
+                    )
+                }
             }
         }
     }
@@ -283,8 +314,8 @@ fun SubjectDetailScreen(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete Subject?") },
-            text = { Text("Are you sure you want to delete '${subject.name}' and all associated topics, notes, and assignment rolls?") },
+            title = { Text("Delete Course?", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete '${subject.name}'? This will archive its syllabus topics, coursework roll records, and Google Drive folder structure.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -293,7 +324,7 @@ fun SubjectDetailScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete")
+                    Text("Delete Course")
                 }
             },
             dismissButton = {
@@ -317,117 +348,115 @@ private fun TopicsTabContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Outlined.Book,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("No Syllabus Topics Added", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Add topics manually or use AI Syllabus generator to break down syllabus automatically.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onAddTopicClick) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Add Topic")
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = Color.White.copy(alpha = 0.85f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Book,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = CollegeBlue
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No Lecture Topics Added",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CollegeNavy
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Add syllabus units, lecture slides, and reading materials for students.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onAddTopicClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Add Lecture Topic")
+                    }
                 }
             }
         }
     } else {
+        val groupedTopics = topics.groupBy { it.unitTitle.ifEmpty { "General Module" } }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(topics, key = { it.id }) { topic ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { onTopicClick(topic) }
-                        .testTag("topic_item_${topic.id}"),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (topic.isCovered)
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        else MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+            groupedTopics.forEach { (unitName, unitTopics) ->
+                item {
+                    Text(
+                        text = unitName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = CollegeNavy,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                    )
+                }
+
+                items(unitTopics, key = { it.id }) { topic ->
+                    GlassCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onTopicClick(topic) }
+                            .testTag("topic_card_${topic.id}"),
+                        containerColor = Color.White.copy(alpha = 0.88f)
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = topic.isCovered,
-                                    onCheckedChange = { onToggleCovered(topic, it) },
-                                    modifier = Modifier.testTag("topic_checkbox_${topic.id}")
+                            Checkbox(
+                                checked = topic.isCovered,
+                                onCheckedChange = { checked -> onToggleCovered(topic, checked) },
+                                modifier = Modifier.testTag("topic_checkbox_${topic.id}")
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = topic.topicName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (topic.isCovered) MaterialTheme.colorScheme.onSurfaceVariant else CollegeNavy
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = topic.unitTitle,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = accentColor,
-                                        fontWeight = FontWeight.Bold
+                                        text = "${topic.estimatedHours} hrs lecture",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Text(
-                                        text = topic.topicName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    if (topic.targetDate.isNotEmpty()) {
+                                        Text(
+                                            text = " • Target: ${topic.targetDate}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
-
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        if (topic.notes.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Notes: ${topic.notes}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "${topic.estimatedHours} hrs target",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Text(
-                                text = if (topic.isCovered) "✓ Covered" else "${topic.coveragePercentage}% Progress",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (topic.isCovered) EmeraldSuccess else accentColor,
-                                fontWeight = FontWeight.Bold
+                                tint = CollegeBlue
                             )
                         }
                     }
@@ -451,29 +480,47 @@ private fun AssignmentsTabContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Outlined.Assignment,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = accentColor
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("No Assignments Created", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Create assignments to track student submissions for Roll Numbers 1 to 60.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onCreateAssignmentClick) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Create Assignment")
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = Color.White.copy(alpha = 0.85f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Assignment,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = CollegeBlue
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No Coursework Created",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CollegeNavy
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Create lab assignments, term projects, or midterms with automatic student roll submission tracking.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onCreateAssignmentClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Create Coursework")
+                    }
                 }
             }
         }
@@ -485,14 +532,12 @@ private fun AssignmentsTabContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(assignments, key = { it.id }) { assignment ->
-                Card(
+                GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
                         .clickable { onAssignmentClick(assignment) }
                         .testTag("assignment_card_${assignment.id}"),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    containerColor = Color.White.copy(alpha = 0.88f)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -504,7 +549,8 @@ private fun AssignmentsTabContent(
                                 Text(
                                     text = assignment.title,
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = CollegeNavy
                                 )
                                 if (assignment.dueDate.isNotEmpty()) {
                                     Text(
@@ -516,7 +562,7 @@ private fun AssignmentsTabContent(
                             }
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
-                                color = accentColor.copy(alpha = 0.15f)
+                                color = CollegeBlue.copy(alpha = 0.12f)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -526,13 +572,13 @@ private fun AssignmentsTabContent(
                                         imageVector = Icons.Default.People,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = accentColor
+                                        tint = CollegeBlue
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Roll Submissions",
+                                        text = "Student Roll Register",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = accentColor,
+                                        color = CollegeBlue,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -555,15 +601,15 @@ private fun AssignmentsTabContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Tap to open Roll Tracker Matrix",
+                                text = "Tap to open Submission & Grades Roll Register",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = accentColor,
+                                color = CollegeBlue,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                tint = accentColor
+                                tint = CollegeBlue
                             )
                         }
                     }
@@ -587,10 +633,9 @@ private fun AiSyllabusTabContent(
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Card(
+        GlassCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            containerColor = Color.White.copy(alpha = 0.88f)
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -604,13 +649,14 @@ private fun AiSyllabusTabContent(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "AI Lesson Plan Generator",
+                    text = "AI Course Curriculum Planner",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = CollegeNavy
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Paste or select a syllabus text document for '${subject.name}'. Gemini AI will automatically structure units, lesson topics, target teaching hours, and teaching notes.",
+                    text = "Paste course outline or syllabus text for '${subject.name}'. Gemini AI will format units, lecture topics, estimated hours, learning outcomes, and auto-sync with Google Drive.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -624,7 +670,7 @@ private fun AiSyllabusTabContent(
                 ) {
                     Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Launch AI Syllabus Generator")
+                    Text("Launch AI Curriculum Generator")
                 }
             }
         }
@@ -636,7 +682,7 @@ private fun AddTopicDialog(
     onDismiss: () -> Unit,
     onConfirm: (unit: String, name: String, hrs: Float, date: String, obj: String, notes: String) -> Unit
 ) {
-    var unitTitle by remember { mutableStateOf("Unit 1") }
+    var unitTitle by remember { mutableStateOf("Module 1: Fundamentals") }
     var topicName by remember { mutableStateOf("") }
     var estimatedHoursText by remember { mutableStateOf("2.0") }
     var targetDate by remember { mutableStateOf("2026-08-15") }
@@ -645,13 +691,13 @@ private fun AddTopicDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Lesson Plan Topic", fontWeight = FontWeight.Bold) },
+        title = { Text("Add Syllabus Topic", fontWeight = FontWeight.Bold, color = CollegeNavy) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = unitTitle,
                     onValueChange = { unitTitle = it },
-                    label = { Text("Unit / Chapter Title") },
+                    label = { Text("Syllabus Module / Unit (e.g. Module 1)") },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -660,7 +706,7 @@ private fun AddTopicDialog(
                 OutlinedTextField(
                     value = topicName,
                     onValueChange = { topicName = it },
-                    label = { Text("Topic Name / Lesson Title") },
+                    label = { Text("Lecture Topic (e.g. Tree Traversal Algorithms)") },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -670,7 +716,7 @@ private fun AddTopicDialog(
                     OutlinedTextField(
                         value = estimatedHoursText,
                         onValueChange = { estimatedHoursText = it },
-                        label = { Text("Est. Hours") },
+                        label = { Text("Lecture Hrs") },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
@@ -691,7 +737,7 @@ private fun AddTopicDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Teacher Notes / Activities") },
+                    label = { Text("Lecture Notes & Reference Bibliography") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -702,7 +748,8 @@ private fun AddTopicDialog(
                     val hrs = estimatedHoursText.toFloatOrNull() ?: 2.0f
                     onConfirm(unitTitle, topicName, hrs, targetDate, learningObjectives, notes)
                 },
-                modifier = Modifier.testTag("confirm_add_topic_button")
+                modifier = Modifier.testTag("confirm_add_topic_button"),
+                colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue)
             ) {
                 Text("Save Topic")
             }
@@ -726,18 +773,18 @@ private fun AddAssignmentDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Assignment for Roll Numbers", fontWeight = FontWeight.Bold) },
+        title = { Text("Create Coursework / Exam Roll Register", fontWeight = FontWeight.Bold, color = CollegeNavy) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Will automatically generate submission tracker for Roll #1 to Roll #$totalRolls.",
+                    text = "Will automatically generate submission matrix for Roll #1 to Roll #$totalRolls.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = CollegeBlue
                 )
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Assignment Title (e.g. Homework #1)") },
+                    label = { Text("Coursework Title (e.g. Lab Project 1)") },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -746,7 +793,7 @@ private fun AddAssignmentDialog(
                 OutlinedTextField(
                     value = desc,
                     onValueChange = { desc = it },
-                    label = { Text("Instructions / Homework Questions") },
+                    label = { Text("Coursework Instructions & Problem Statement") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -773,9 +820,10 @@ private fun AddAssignmentDialog(
                     val marks = maxMarksText.toIntOrNull() ?: 20
                     onConfirm(title, desc, dueDate, marks)
                 },
-                modifier = Modifier.testTag("confirm_add_assignment_button")
+                modifier = Modifier.testTag("confirm_add_assignment_button"),
+                colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue)
             ) {
-                Text("Create Assignment")
+                Text("Create Coursework")
             }
         },
         dismissButton = {

@@ -39,7 +39,7 @@ object AppSecurityManager {
     }
 
     fun isFlagSecureEnabled(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_FLAG_SECURE, true)
+        return getPrefs(context).getBoolean(KEY_FLAG_SECURE, false)
     }
 
     fun setFlagSecureEnabled(context: Context, enabled: Boolean) {

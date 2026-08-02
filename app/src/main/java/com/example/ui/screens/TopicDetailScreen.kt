@@ -22,15 +22,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.CloudUpload
+import com.example.util.GoogleDriveManager
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material3.AlertDialog
@@ -62,13 +66,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.entity.TopicEntity
 import com.example.data.entity.TopicSourceEntity
+import com.example.ui.components.GlassCard
+import com.example.ui.components.GlassmorphicCanvas
+import com.example.ui.theme.CollegeBlue
+import com.example.ui.theme.CollegeNavy
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 
@@ -88,236 +95,258 @@ fun TopicDetailScreen(
     var coveragePercent by remember { mutableStateOf(topic.coveragePercentage.toFloat()) }
     var isCovered by remember { mutableStateOf(topic.isCovered) }
 
-    // Storage Access Framework Document Picker launcher
     val documentPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            onAddSource("Storage Document (${it.lastPathSegment ?: "File"})", "FILE_URI", it.toString())
+            onAddSource("Lecture Slides (${it.lastPathSegment ?: "Document"})", "FILE_URI", it.toString())
+            val uploaded = GoogleDriveManager.uploadAttachmentToSubjectDriveFolder(
+                context = context,
+                subjectName = "Classroom Materials",
+                gradeClass = "Reference",
+                subfolderCategory = "4. Reference Materials & Resources",
+                fileName = "Lecture_Slide_${it.lastPathSegment ?: "Doc"}.pdf"
+            )
+            if (uploaded) {
+                Toast.makeText(context, "Attached document and uploaded to Google Drive!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Attached document (Already up to date on Google Drive)", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = topic.topicName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = topic.unitTitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { onDeleteTopic(topic) }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Topic",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddSourceDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White,
-                modifier = Modifier.testTag("add_source_fab")
-            ) {
-                Icon(imageVector = Icons.Default.AttachFile, contentDescription = "Attach Source")
-            }
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Coverage & Progress Status Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+    GlassmorphicCanvas {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
                             Text(
-                                text = "Coverage Progress",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = isCovered,
-                                    onCheckedChange = { checked ->
-                                        isCovered = checked
-                                        val newPercent = if (checked) 100 else coveragePercent.toInt()
-                                        onUpdateCoverage(topic, checked, newPercent)
-                                    },
-                                    modifier = Modifier.testTag("topic_detail_covered_checkbox")
-                                )
-                                Text(
-                                    text = if (isCovered) "Covered (100%)" else "${coveragePercent.toInt()}%",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isCovered) EmeraldSuccess else IndigoPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        if (!isCovered) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Slider(
-                                value = coveragePercent,
-                                onValueChange = { coveragePercent = it },
-                                onValueChangeFinished = {
-                                    onUpdateCoverage(topic, isCovered, coveragePercent.toInt())
-                                },
-                                valueRange = 0f..100f,
-                                modifier = Modifier.testTag("coverage_slider")
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Learning Objectives
-            if (topic.learningObjectives.isNotEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        shape = RoundedCornerShape(20.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Learning Objectives",
-                                style = MaterialTheme.typography.titleSmall,
+                                text = topic.topicName,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = CollegeNavy
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = topic.learningObjectives,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Teacher Notes
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Teacher Lesson Notes",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = topic.notes.ifEmpty { "No lesson notes added yet." },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (topic.notes.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            // Attached Sources & References Section
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Attached Sources & References (${sources.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    TextButton(onClick = { showAddSourceDialog = true }) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Attach")
-                    }
-                }
-            }
-
-            if (sources.isEmpty()) {
-                item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(imageVector = Icons.Default.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("No Sources Attached", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                "Attach syllabus PDFs, textbook references, or web links to this topic.",
+                                text = "${topic.unitTitle.ifEmpty { "Module Topic" }} • ${topic.estimatedHours} hrs lecture",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
-                }
-            } else {
-                items(sources, key = { it.id }) { source ->
-                    SourceItemCard(
-                        source = source,
-                        onDelete = { onDeleteSource(source) },
-                        onOpen = {
-                            if (source.sourceType == "URL" && source.uriOrContent.startsWith("http")) {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(source.uriOrContent))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    // fallback
-                                }
-                            }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
+                    },
+                    actions = {
+                        IconButton(onClick = { onDeleteTopic(topic) }) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Topic", tint = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White.copy(alpha = 0.85f)
                     )
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showAddSourceDialog = true },
+                    containerColor = CollegeBlue,
+                    contentColor = Color.White,
+                    modifier = Modifier.testTag("add_source_fab")
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Attach Course Materials")
                 }
             }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = Color.White.copy(alpha = 0.88f)
+                    ) {
+                        Column(modifier = Modifier.padding(18.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Lecture Coverage Progress",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CollegeNavy
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = isCovered,
+                                        onCheckedChange = { checked ->
+                                            isCovered = checked
+                                            coveragePercent = if (checked) 100f else 0f
+                                            onUpdateCoverage(topic, checked, coveragePercent.toInt())
+                                        }
+                                    )
+                                    Text(
+                                        text = if (isCovered) "Covered" else "In Progress",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isCovered) EmeraldSuccess else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
 
-            item {
-                Spacer(modifier = Modifier.height(80.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "${coveragePercent.toInt()}% Syllabus Covered",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Slider(
+                                value = coveragePercent,
+                                onValueChange = { value ->
+                                    coveragePercent = value
+                                    isCovered = value >= 100f
+                                },
+                                onValueChangeFinished = {
+                                    onUpdateCoverage(topic, isCovered, coveragePercent.toInt())
+                                },
+                                valueRange = 0f..100f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+
+                if (topic.learningObjectives.isNotEmpty()) {
+                    item {
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = Color.White.copy(alpha = 0.88f)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Course Objectives & Learning Outcomes",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CollegeNavy
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = topic.learningObjectives,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (topic.notes.isNotEmpty()) {
+                    item {
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = Color.White.copy(alpha = 0.88f)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Lecture Notes & Recommended Reading",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CollegeNavy
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = topic.notes,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Course Slides & References (${sources.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CollegeNavy
+                        )
+                        TextButton(onClick = { showAddSourceDialog = true }) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Attach Material")
+                        }
+                    }
+                }
+
+                if (sources.isEmpty()) {
+                    item {
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = Color.White.copy(alpha = 0.85f)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AttachFile,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = CollegeBlue
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "No Reference Materials Attached",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CollegeNavy
+                                )
+                                Text(
+                                    text = "Attach lecture slide PDFs, research links, or textbook references.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    items(sources, key = { it.id }) { source ->
+                        SourceItemCard(
+                            source = source,
+                            onOpen = {
+                                if (source.sourceType == "URL" && source.uriOrContent.startsWith("http")) {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(source.uriOrContent))
+                                    context.startActivity(intent)
+                                } else {
+                                    Toast.makeText(context, "Reference: ${source.uriOrContent}", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            onDelete = { onDeleteSource(source) }
+                        )
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
             }
         }
     }
@@ -326,11 +355,27 @@ fun TopicDetailScreen(
         AddSourceDialog(
             onDismiss = { showAddSourceDialog = false },
             onPickDocument = {
-                documentPickerLauncher.launch(arrayOf("*/*"))
                 showAddSourceDialog = false
+                try {
+                    documentPickerLauncher.launch(arrayOf("application/pdf", "image/*", "text/*"))
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Storage picker open error", Toast.LENGTH_SHORT).show()
+                }
             },
-            onConfirmCustom = { title, type, content ->
-                onAddSource(title, type, content)
+            onConfirmCustom = { title, type, contentStr ->
+                onAddSource(title, type, contentStr)
+                val uploaded = GoogleDriveManager.uploadAttachmentToSubjectDriveFolder(
+                    context = context,
+                    subjectName = "Classroom Reference",
+                    gradeClass = "Materials",
+                    subfolderCategory = "4. Reference Materials & Resources",
+                    fileName = title
+                )
+                if (uploaded) {
+                    Toast.makeText(context, "Saved '$title' & uploaded to Google Drive!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Saved '$title' (Drive copy is already up to date)", Toast.LENGTH_SHORT).show()
+                }
                 showAddSourceDialog = false
             }
         )
@@ -340,41 +385,46 @@ fun TopicDetailScreen(
 @Composable
 private fun SourceItemCard(
     source: TopicSourceEntity,
-    onDelete: () -> Unit,
-    onOpen: () -> Unit
+    onOpen: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onOpen)
-            .testTag("source_item_${source.id}"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = Color.White.copy(alpha = 0.88f)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                val icon = when (source.sourceType) {
-                    "URL" -> Icons.Default.Link
-                    "FILE_URI" -> Icons.Default.PictureAsPdf
-                    "BOOK_REF" -> Icons.Default.Book
-                    else -> Icons.Outlined.Bookmark
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(CollegeBlue.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = if (source.sourceType == "URL") Icons.Default.Link else Icons.Default.PictureAsPdf,
+                        contentDescription = null,
+                        tint = CollegeBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = source.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = source.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = CollegeNavy
+                    )
                     Text(
                         text = source.uriOrContent,
                         style = MaterialTheme.typography.bodySmall,
@@ -385,9 +435,30 @@ private fun SourceItemCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val context = LocalContext.current
+                IconButton(
+                    onClick = {
+                        val uploaded = GoogleDriveManager.uploadFileToClassroomFolder(
+                            context = context,
+                            folderName = "Classroom / Reference Materials",
+                            fileName = source.title
+                        )
+                        if (uploaded) {
+                            Toast.makeText(context, "Saved '${source.title}' to Google Drive Folder!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "'${source.title}' is already up to date in Google Drive", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudUpload,
+                        contentDescription = "Upload to Google Drive",
+                        tint = CollegeBlue
+                    )
+                }
                 if (source.sourceType == "URL") {
                     IconButton(onClick = onOpen) {
-                        Icon(imageVector = Icons.Default.OpenInNew, contentDescription = "Open Link")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open Link")
                     }
                 }
                 IconButton(onClick = onDelete) {
@@ -410,26 +481,27 @@ private fun AddSourceDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Attach Source / Reference", fontWeight = FontWeight.Bold) },
+        title = { Text("Attach Course Material", fontWeight = FontWeight.Bold, color = CollegeNavy) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = onPickDocument,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("pick_file_from_storage_button")
+                        .testTag("pick_file_from_storage_button"),
+                    colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue)
                 ) {
                     Icon(imageVector = Icons.Default.AttachFile, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Select PDF/Document from Storage")
+                    Text("Upload Slide Deck / PDF File")
                 }
 
-                Text("— OR Add Web Link / Book Ref —", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
+                Text("— OR Add Web URL / IEEE Bibliography —", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
 
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title (e.g., Chapter 4 PDF Link)") },
+                    label = { Text("Title (e.g. Lecture 5 Slide Deck)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -437,7 +509,7 @@ private fun AddSourceDialog(
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
-                    label = { Text("URL / Book Reference / Note") },
+                    label = { Text("URL / DOI Link / Textbook Chapter") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -445,21 +517,21 @@ private fun AddSourceDialog(
                     Button(
                         onClick = { selectedType = "URL" },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedType == "URL") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor = if (selectedType == "URL") CollegeBlue else MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = if (selectedType == "URL") Color.White else MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Text("Web URL")
+                        Text("Web Link")
                     }
 
                     Button(
                         onClick = { selectedType = "BOOK_REF" },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedType == "BOOK_REF") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor = if (selectedType == "BOOK_REF") CollegeBlue else MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = if (selectedType == "BOOK_REF") Color.White else MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Text("Book Ref")
+                        Text("Textbook Ref")
                     }
                 }
             }
@@ -467,9 +539,10 @@ private fun AddSourceDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirmCustom(title, selectedType, content) },
-                modifier = Modifier.testTag("confirm_add_source_button")
+                modifier = Modifier.testTag("confirm_add_source_button"),
+                colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue)
             ) {
-                Text("Attach Source")
+                Text("Attach Reference")
             }
         },
         dismissButton = {

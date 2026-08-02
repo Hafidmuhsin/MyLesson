@@ -15,6 +15,7 @@ import com.example.data.entity.TopicEntity
 import com.example.data.entity.TopicSourceEntity
 import com.example.data.repository.TeacherRepository
 import com.example.security.AppSecurityManager
+import com.example.util.GoogleDriveManager
 import com.example.util.TeacherStorageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +41,13 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     val repository = TeacherRepository(db)
 
     val subjects: StateFlow<List<SubjectEntity>> = repository.allSubjects
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val allTopics: StateFlow<List<TopicEntity>> = repository.allTopics
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -88,16 +96,26 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 _userMessage.value = "Subject name cannot be empty"
                 return@launch
             }
+            val cleanGrade = AppSecurityManager.sanitizeInput(gradeClass, 50).ifEmpty { "General" }
             val subject = SubjectEntity(
                 name = cleanName,
-                gradeClass = AppSecurityManager.sanitizeInput(gradeClass, 50).ifEmpty { "General" },
+                gradeClass = cleanGrade,
                 colorHex = colorHex,
                 totalRolls = if (totalRolls > 0) totalRolls else 60,
                 description = AppSecurityManager.sanitizeInput(description, 500)
             )
             val id = repository.insertSubject(subject)
             _selectedSubjectId.value = id
-            _userMessage.value = "Subject '${subject.name}' added successfully!"
+
+            // Parallel Google Drive Folder Creation for this specific subject
+            GoogleDriveManager.createSubjectDriveFolder(
+                context = getApplication(),
+                subjectId = id,
+                subjectName = cleanName,
+                gradeClass = cleanGrade
+            )
+
+            _userMessage.value = "Subject '${subject.name}' added & Google Drive Folder created!"
         }
     }
 
@@ -109,7 +127,15 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 description = AppSecurityManager.sanitizeInput(subject.description, 500)
             )
             repository.updateSubject(sanitized)
-            _userMessage.value = "Subject updated"
+            
+            // Sync updated subject drive folder name
+            GoogleDriveManager.syncSubjectToClassroomDrive(
+                context = getApplication(),
+                subjectId = sanitized.id,
+                subjectName = sanitized.name,
+                gradeClass = sanitized.gradeClass
+            )
+            _userMessage.value = "Subject updated & Drive folder synced"
         }
     }
 
@@ -119,7 +145,16 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
             if (_selectedSubjectId.value == subject.id) {
                 _selectedSubjectId.value = null
             }
-            _userMessage.value = "Subject deleted"
+
+            // Parallel Google Drive Folder Deletion / Archiving for this specific subject
+            GoogleDriveManager.deleteSubjectDriveFolder(
+                context = getApplication(),
+                subjectId = subject.id,
+                subjectName = subject.name,
+                gradeClass = subject.gradeClass
+            )
+
+            _userMessage.value = "Subject '${subject.name}' & Drive folder deleted"
         }
     }
 
@@ -195,7 +230,23 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 uriOrContent = cleanContent
             )
             repository.insertSource(source)
-            _userMessage.value = "Source attachment added!"
+
+            // Auto-upload attached file/resource to exact subject Google Drive folder
+            val topic = repository.getTopicByIdOneShot(topicId)
+            if (topic != null) {
+                val subject = repository.getSubjectByIdOneShot(topic.subjectId)
+                if (subject != null) {
+                    GoogleDriveManager.uploadAttachmentToSubjectDriveFolder(
+                        context = getApplication(),
+                        subjectName = subject.name,
+                        gradeClass = subject.gradeClass,
+                        subfolderCategory = "4. Reference Materials & Resources",
+                        fileName = cleanTitle
+                    )
+                }
+            }
+
+            _userMessage.value = "Attachment added & uploaded to Subject's Drive folder!"
         }
     }
 
@@ -222,7 +273,20 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 maxMarks = if (maxMarks > 0) maxMarks else 100
             )
             repository.createAssignmentWithRolls(assignment, totalRolls)
-            _userMessage.value = "Assignment created with $totalRolls student roll numbers!"
+
+            // Auto-upload assignment file to exact subject Google Drive folder
+            val subject = repository.getSubjectByIdOneShot(subjectId)
+            if (subject != null) {
+                GoogleDriveManager.uploadAttachmentToSubjectDriveFolder(
+                    context = getApplication(),
+                    subjectName = subject.name,
+                    gradeClass = subject.gradeClass,
+                    subfolderCategory = "2. Classwork & Assignments",
+                    fileName = "$cleanTitle.pdf"
+                )
+            }
+
+            _userMessage.value = "Assignment created with $totalRolls student rolls & uploaded to Drive!"
         }
     }
 
@@ -339,8 +403,21 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
             db.topicDao().insertTopics(topicsToInsert)
+
+            // Auto-upload AI generated lesson plan document to subject's Google Drive folder
+            val subject = repository.getSubjectByIdOneShot(subjectId)
+            if (subject != null) {
+                GoogleDriveManager.uploadAttachmentToSubjectDriveFolder(
+                    context = getApplication(),
+                    subjectName = subject.name,
+                    gradeClass = subject.gradeClass,
+                    subfolderCategory = "1. Syllabus & Lesson Plans",
+                    fileName = "${subject.name}_AI_Generated_Lesson_Plan.pdf"
+                )
+            }
+
             _aiState.value = AiGeneratorUiState.Idle
-            _userMessage.value = "Successfully imported ${topicsToInsert.size} AI lesson topics into Subject!"
+            _userMessage.value = "Successfully imported ${topicsToInsert.size} AI lesson topics & uploaded to Drive!"
         }
     }
 

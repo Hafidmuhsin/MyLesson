@@ -35,6 +35,9 @@ import com.example.ui.screens.TopicDetailScreen
 import com.example.ui.theme.TeacherPlanTheme
 import com.example.ui.viewmodel.TeacherViewModel
 
+import com.example.ui.screens.GoogleDriveScreen
+import com.example.util.GoogleDriveManager
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: TeacherViewModel by viewModels()
@@ -42,12 +45,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        GoogleDriveManager.init(this)
+        com.example.util.UserProfileManager.init(this)
 
         if (AppSecurityManager.isFlagSecureEnabled(this)) {
             window.setFlags(
                 WindowManager.LayoutParams.FLAG_SECURE,
                 WindowManager.LayoutParams.FLAG_SECURE
             )
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
 
         setContent {
@@ -67,6 +74,7 @@ class MainActivity : ComponentActivity() {
 fun TeacherPlanApp(viewModel: TeacherViewModel) {
     val navController = rememberNavController()
     val subjects by viewModel.subjects.collectAsStateWithLifecycle()
+    val allTopics by viewModel.allTopics.collectAsStateWithLifecycle()
     val timetableSlots by viewModel.timetableSlots.collectAsStateWithLifecycle()
     val selectedSubjectId by viewModel.selectedSubjectId.collectAsStateWithLifecycle()
     val aiState by viewModel.aiState.collectAsStateWithLifecycle()
@@ -94,6 +102,7 @@ fun TeacherPlanApp(viewModel: TeacherViewModel) {
         composable("dashboard") {
             DashboardScreen(
                 subjects = subjects,
+                topics = allTopics,
                 onSelectSubject = { subjectId ->
                     viewModel.selectSubject(subjectId)
                     navController.navigate("subject_detail/$subjectId")
@@ -104,9 +113,20 @@ fun TeacherPlanApp(viewModel: TeacherViewModel) {
                 onOpenTimetable = {
                     navController.navigate("timetable")
                 },
+                onOpenGoogleDrive = {
+                    navController.navigate("google_drive")
+                },
                 onAddSubject = { name, grade, color, rolls, desc ->
                     viewModel.addSubject(name, grade, color, rolls, desc)
                 }
+            )
+        }
+
+        // Google Drive Classroom Workspace Screen
+        composable("google_drive") {
+            GoogleDriveScreen(
+                subjects = subjects,
+                onBack = { navController.popBackStack() }
             )
         }
 

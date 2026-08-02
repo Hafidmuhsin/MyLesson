@@ -24,7 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
@@ -32,6 +33,10 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.List
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.CloudSync
+import com.example.util.GoogleDriveManager
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
@@ -68,6 +73,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.entity.AssignmentEntity
 import com.example.data.entity.StudentSubmissionEntity
+import com.example.ui.components.GlassCard
+import com.example.ui.components.GlassmorphicCanvas
+import com.example.ui.theme.CollegeBlue
+import com.example.ui.theme.CollegeNavy
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 
@@ -94,7 +103,7 @@ fun AssignmentRollScreen(
 
     val filteredSubmissions = remember(submissions, searchQuery, filterMode) {
         submissions.filter { sub ->
-            val matchesSearch = searchQuery.isBlank() ||
+            val matchesQuery = searchQuery.isEmpty() ||
                     sub.rollNumber.toString().contains(searchQuery) ||
                     sub.studentName.contains(searchQuery, ignoreCase = true)
             val matchesFilter = when (filterMode) {
@@ -102,147 +111,155 @@ fun AssignmentRollScreen(
                 "PENDING" -> !sub.isDone
                 else -> true
             }
-            matchesSearch && matchesFilter
+            matchesQuery && matchesFilter
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = assignment.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = "Due: ${assignment.dueDate.ifEmpty { "No date" }} • Max Marks: ${assignment.maxMarks}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { isGridView = !isGridView }) {
-                        Icon(
-                            imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
-                            contentDescription = "Toggle Grid/List",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Stats Header Card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+    GlassmorphicCanvas {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
                         Column {
                             Text(
-                                text = "Roll Completion: $doneCount / $totalRolls",
-                                style = MaterialTheme.typography.titleSmall,
+                                text = assignment.title,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = CollegeNavy
                             )
                             Text(
-                                text = "Tap Roll Chip to mark Done/Pending",
-                                style = MaterialTheme.typography.labelSmall,
+                                text = "Coursework Submissions & Student Grades Register",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        val context = LocalContext.current
+                        IconButton(
+                            onClick = {
+                                val uploaded = GoogleDriveManager.uploadAttachmentToSubjectDriveFolder(
+                                    context = context,
+                                    subjectName = "Coursework Grades",
+                                    gradeClass = "Submissions",
+                                    subfolderCategory = "3. Student Submissions & Grades",
+                                    fileName = "Grades_${assignment.title}_Export.csv"
+                                )
+                                if (uploaded) {
+                                    Toast.makeText(context, "Exported grades matrix & synced to Google Drive!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Grades matrix is already up to date on Google Drive", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.testTag("sync_assignment_drive_button")
+                        ) {
+                            Icon(imageVector = Icons.Default.CloudSync, contentDescription = "Sync to Google Drive", tint = CollegeBlue)
+                        }
+                        IconButton(
+                            onClick = { isGridView = !isGridView },
+                            modifier = Modifier.testTag("toggle_view_button")
+                        ) {
+                            Icon(
+                                imageVector = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
+                                contentDescription = "Toggle Grid/List View"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White.copy(alpha = 0.85f)
+                    )
+                )
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp)
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = "${(completionPercent * 100).toInt()}% Done",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldSuccess
+                // Stats Header
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = Color.White.copy(alpha = 0.88f)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Submitted: $doneCount / $totalRolls Students (${(completionPercent * 100).toInt()}%)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CollegeNavy
+                                )
+                                Text(
+                                    text = "$pendingCount Pending • Max Marks: ${assignment.maxMarks}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Row {
+                                TextButton(
+                                    onClick = { onMarkAllDone(true) },
+                                    modifier = Modifier.testTag("mark_all_done_button")
+                                ) {
+                                    Icon(imageVector = Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Mark All")
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { completionPercent },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = CollegeBlue,
+                            trackColor = CollegeBlue.copy(alpha = 0.15f)
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { completionPercent },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = EmeraldSuccess,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Batch Actions
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { onMarkAllDone(true) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("mark_all_done_button"),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Mark All Done", fontSize = 12.sp)
-                        }
-
-                        Button(
-                            onClick = { onMarkAllDone(false) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("clear_all_button"),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurface),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Clear All", fontSize = 12.sp)
-                        }
-                    }
                 }
-            }
 
-            // Filters & Search Bar
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search Roll Number (e.g. 15)") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("roll_search_input")
-                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Controls: Search & Filter
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search Roll # or Student") },
+                        leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("roll_search_input")
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     FilterChip(
                         selected = filterMode == "ALL",
                         onClick = { filterMode = "ALL" },
@@ -262,53 +279,51 @@ fun AssignmentRollScreen(
                         modifier = Modifier.testTag("filter_pending_chip")
                     )
                 }
-            }
 
-            // Main Content: Grid Matrix or Vertical List
-            if (isGridView) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(5), // 5 columns matrix for quick attendance / submission tapping
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(filteredSubmissions, key = { it.id }) { sub ->
-                        RollMatrixChip(
-                            submission = sub,
-                            onToggle = { onToggleDone(sub) },
-                            onLongClick = { editingSubmission = sub }
-                        )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Submissions Matrix Grid or List
+                if (isGridView) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 75.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredSubmissions, key = { it.id }) { sub ->
+                            RollGridCell(
+                                submission = sub,
+                                onToggleDone = { onToggleDone(sub) },
+                                onLongClick = { editingSubmission = sub }
+                            )
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(filteredSubmissions, key = { it.id }) { sub ->
-                        RollListItemCard(
-                            submission = sub,
-                            maxMarks = assignment.maxMarks,
-                            onToggleDone = { onToggleDone(sub) },
-                            onEditMarks = { editingSubmission = sub }
-                        )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredSubmissions, key = { it.id }) { sub ->
+                            RollListItem(
+                                submission = sub,
+                                maxMarks = assignment.maxMarks,
+                                onToggleDone = { onToggleDone(sub) },
+                                onEditMarks = { editingSubmission = sub }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    editingSubmission?.let { sub ->
+    if (editingSubmission != null) {
         EditSubmissionMarksDialog(
-            submission = sub,
+            submission = editingSubmission!!,
             maxMarks = assignment.maxMarks,
             onDismiss = { editingSubmission = null },
             onConfirm = { marks, remarks ->
-                onUpdateMarks(sub, marks, remarks)
+                onUpdateMarks(editingSubmission!!, marks, remarks)
                 editingSubmission = null
             }
         )
@@ -316,55 +331,48 @@ fun AssignmentRollScreen(
 }
 
 @Composable
-private fun RollMatrixChip(
+private fun RollGridCell(
     submission: StudentSubmissionEntity,
-    onToggle: () -> Unit,
+    onToggleDone: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    val bgColor = if (submission.isDone) EmeraldSuccess else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (submission.isDone) Color.White else MaterialTheme.colorScheme.onSurface
+    val bgColor = if (submission.isDone) EmeraldSuccess else Color.White.copy(alpha = 0.88f)
+    val textColor = if (submission.isDone) Color.White else CollegeNavy
 
-    Surface(
+    GlassCard(
         modifier = Modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onToggle)
-            .testTag("roll_chip_${submission.rollNumber}"),
-        color = bgColor,
-        tonalElevation = if (submission.isDone) 4.dp else 0.dp
+            .clickable(onClick = onToggleDone)
+            .testTag("roll_cell_${submission.rollNumber}"),
+        containerColor = if (submission.isDone) EmeraldSuccess else Color.White.copy(alpha = 0.88f),
+        borderColor = if (submission.isDone) EmeraldSuccess else Color(0x332563EB)
     ) {
         Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(4.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(6.dp),
+            contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "#${submission.rollNumber}",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
-                if (submission.isDone) {
+                if (submission.marksObtained != null) {
+                    Text(
+                        text = "${submission.marksObtained.toInt()}m",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (submission.isDone) Color.White.copy(alpha = 0.9f) else CollegeBlue
+                    )
+                } else if (submission.isDone) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Done",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
-                    )
-                    if (submission.marksObtained != null) {
-                        Text(
-                            text = "${submission.marksObtained.toInt()}m",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
-                            fontSize = 10.sp
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "Pending",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 9.sp
                     )
                 }
             }
@@ -373,19 +381,18 @@ private fun RollMatrixChip(
 }
 
 @Composable
-private fun RollListItemCard(
+private fun RollListItem(
     submission: StudentSubmissionEntity,
     maxMarks: Int,
     onToggleDone: () -> Unit,
     onEditMarks: () -> Unit
 ) {
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onToggleDone)
             .testTag("roll_list_item_${submission.rollNumber}"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        containerColor = Color.White.copy(alpha = 0.88f)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -401,9 +408,10 @@ private fun RollListItemCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Roll #${submission.rollNumber} ${submission.studentName.ifEmpty { "" }}",
+                        text = "Student Roll #${submission.rollNumber} ${submission.studentName.ifEmpty { "" }}",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = CollegeNavy
                     )
                     if (submission.isDone && submission.submissionDate.isNotEmpty()) {
                         Text(
@@ -421,12 +429,12 @@ private fun RollListItemCard(
                         text = "${submission.marksObtained.toInt()} / $maxMarks Marks",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = IndigoPrimary
+                        color = CollegeBlue
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 IconButton(onClick = onEditMarks) {
-                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Marks")
+                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Marks", tint = CollegeBlue)
                 }
             }
         }
@@ -445,13 +453,13 @@ private fun EditSubmissionMarksDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Roll #${submission.rollNumber} Marks & Remarks", fontWeight = FontWeight.Bold) },
+        title = { Text("Student Roll #${submission.rollNumber} Evaluation", fontWeight = FontWeight.Bold, color = CollegeNavy) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = marksText,
                     onValueChange = { marksText = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Marks Obtained (Max $maxMarks)") },
+                    label = { Text("Marks / Score Obtained (Max $maxMarks)") },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -460,7 +468,7 @@ private fun EditSubmissionMarksDialog(
                 OutlinedTextField(
                     value = remarks,
                     onValueChange = { remarks = it },
-                    label = { Text("Teacher Remarks / Feedback") },
+                    label = { Text("Faculty Evaluation Notes / Feedback") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -471,9 +479,10 @@ private fun EditSubmissionMarksDialog(
                     val marks = marksText.toFloatOrNull()
                     onConfirm(marks, remarks)
                 },
-                modifier = Modifier.testTag("save_marks_button")
+                modifier = Modifier.testTag("save_marks_button"),
+                colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue)
             ) {
-                Text("Save Marks")
+                Text("Save Evaluation")
             }
         },
         dismissButton = {

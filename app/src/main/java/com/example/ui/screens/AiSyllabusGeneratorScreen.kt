@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
@@ -57,6 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ai.GeneratedSyllabusResult
 import com.example.data.entity.SubjectEntity
+import com.example.ui.components.GlassCard
+import com.example.ui.components.GlassmorphicCanvas
+import com.example.ui.theme.CollegeBlue
+import com.example.ui.theme.CollegeNavy
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.viewmodel.AiGeneratorUiState
 
@@ -74,7 +78,7 @@ fun AiSyllabusGeneratorScreen(
     var syllabusText by remember { mutableStateOf("") }
     var targetSubject by remember(selectedSubject, subjects) { mutableStateOf(selectedSubject ?: subjects.firstOrNull()) }
     val currentTargetSubject = targetSubject ?: selectedSubject ?: subjects.firstOrNull()
-    var gradeLevel by remember(currentTargetSubject) { mutableStateOf(currentTargetSubject?.gradeClass ?: "Grade 10") }
+    var gradeLevel by remember(currentTargetSubject) { mutableStateOf(currentTargetSubject?.gradeClass ?: "Computer Science Dept") }
     var expandedSubjectDropdown by remember { mutableStateOf(false) }
 
     // SAF File Picker
@@ -88,210 +92,218 @@ fun AiSyllabusGeneratorScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("AI Syllabus & Lesson Planner", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = EmeraldSuccess,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
+    GlassmorphicCanvas {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
                         Column {
-                            Text("Gemini AI Curriculum Assistant", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(
-                                "Paste syllabus text or select a document file from phone storage. AI will auto-create structured unit topics, objectives, and teaching notes.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Faculty AI Course Planner", fontWeight = FontWeight.Bold, color = CollegeNavy)
+                            Text("Curriculum Structuring & Lesson Plan Generation", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    }
-                }
-            }
-
-            item {
-                // Target Subject Selection
-                ExposedDropdownMenuBox(
-                    expanded = expandedSubjectDropdown,
-                    onExpandedChange = { expandedSubjectDropdown = !expandedSubjectDropdown }
-                ) {
-                    OutlinedTextField(
-                        value = currentTargetSubject?.name ?: "Select Target Subject",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Target Subject") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubjectDropdown) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor()
-                            .testTag("subject_dropdown")
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = expandedSubjectDropdown,
-                        onDismissRequest = { expandedSubjectDropdown = false }
-                    ) {
-                        subjects.forEach { subject ->
-                            DropdownMenuItem(
-                                text = { Text("${subject.name} (${subject.gradeClass})") },
-                                onClick = {
-                                    targetSubject = subject
-                                    gradeLevel = subject.gradeClass
-                                    expandedSubjectDropdown = false
-                                }
-                            )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
-                    }
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Syllabus / Curriculum Input", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-
-                    Button(
-                        onClick = { docPickerLauncher.launch(arrayOf("*/*")) },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        modifier = Modifier.testTag("pick_file_button")
-                    ) {
-                        Icon(imageVector = Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Pick File", fontSize = 12.sp)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                OutlinedTextField(
-                    value = syllabusText,
-                    onValueChange = { syllabusText = it },
-                    placeholder = { Text("Paste syllabus chapters, course topics, or learning outcomes here...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .testTag("syllabus_text_input")
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White.copy(alpha = 0.85f))
                 )
             }
-
-            item {
-                Button(
-                    onClick = {
-                        val subjName = currentTargetSubject?.name ?: "General Subject"
-                        onGenerate(syllabusText, subjName, gradeLevel)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                        .testTag("generate_ai_plan_button"),
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess),
-                    enabled = aiState !is AiGeneratorUiState.Loading && syllabusText.isNotBlank()
-                ) {
-                    if (aiState is AiGeneratorUiState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Gemini AI is Structuring Lesson Plan...")
-                    } else {
-                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Generate Lesson Plan with Gemini AI", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            when (aiState) {
-                is AiGeneratorUiState.Error -> {
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                            modifier = Modifier.fillMaxWidth()
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = Color.White.copy(alpha = 0.88f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "AI Error: ${aiState.message}",
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(16.dp)
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = CollegeBlue,
+                                modifier = Modifier.size(36.dp)
                             )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Gemini AI Curriculum Engine", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CollegeNavy)
+                                Text(
+                                    "Paste university course curriculum or upload syllabus PDF. AI auto-structures lecture units, learning outcomes, and recommended readings.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
 
-                is AiGeneratorUiState.Success -> {
-                    val result = aiState.result
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Generated Topics (${result.topics.size})",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                item {
+                    // Target Subject Selection
+                    ExposedDropdownMenuBox(
+                        expanded = expandedSubjectDropdown,
+                        onExpandedChange = { expandedSubjectDropdown = !expandedSubjectDropdown }
+                    ) {
+                        OutlinedTextField(
+                            value = currentTargetSubject?.name ?: "Select Target Course",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Target Course / Subject") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSubjectDropdown) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor()
+                                .testTag("subject_dropdown")
+                        )
 
-                            currentTargetSubject?.let { subj ->
-                                Button(
-                                    onClick = { onApplyToSubject(subj.id, result) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                    modifier = Modifier.testTag("import_topics_button")
-                                ) {
-                                    Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Import into ${subj.name}")
+                        ExposedDropdownMenu(
+                            expanded = expandedSubjectDropdown,
+                            onDismissRequest = { expandedSubjectDropdown = false }
+                        ) {
+                            subjects.forEach { subject ->
+                                DropdownMenuItem(
+                                    text = { Text("${subject.name} (${subject.gradeClass})") },
+                                    onClick = {
+                                        targetSubject = subject
+                                        gradeLevel = subject.gradeClass
+                                        expandedSubjectDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Course Syllabus Input", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = CollegeNavy)
+
+                        Button(
+                            onClick = { docPickerLauncher.launch(arrayOf("*/*")) },
+                            colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue),
+                            modifier = Modifier.testTag("pick_file_button")
+                        ) {
+                            Icon(imageVector = Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Upload Syllabus PDF", fontSize = 12.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    OutlinedTextField(
+                        value = syllabusText,
+                        onValueChange = { syllabusText = it },
+                        placeholder = { Text("Paste university course curriculum, unit breakdown, course code, or weekly lecture topics here...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .testTag("syllabus_text_input")
+                    )
+                }
+
+                item {
+                    Button(
+                        onClick = {
+                            val subjName = currentTargetSubject?.name ?: "General Subject"
+                            onGenerate(syllabusText, subjName, gradeLevel)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .testTag("generate_ai_plan_button"),
+                        colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue),
+                        enabled = aiState !is AiGeneratorUiState.Loading && syllabusText.isNotBlank()
+                    ) {
+                        if (aiState is AiGeneratorUiState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Gemini AI is Structuring Course Plan...")
+                        } else {
+                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Generate Course Plan with Gemini AI", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                when (aiState) {
+                    is AiGeneratorUiState.Error -> {
+                        item {
+                            GlassCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
+                            ) {
+                                Text(
+                                    text = "AI Error: ${aiState.message}",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    is AiGeneratorUiState.Success -> {
+                        val result = aiState.result
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Generated Lecture Topics (${result.topics.size})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CollegeNavy
+                                )
+
+                                currentTargetSubject?.let { subj ->
+                                    Button(
+                                        onClick = { onApplyToSubject(subj.id, result) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = CollegeBlue),
+                                        modifier = Modifier.testTag("import_topics_button")
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Import into ${subj.name}")
+                                    }
+                                }
+                            }
+                        }
+
+                        items(result.topics) { topic ->
+                            GlassCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                containerColor = Color.White.copy(alpha = 0.88f)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(text = topic.unitTitle, style = MaterialTheme.typography.labelMedium, color = CollegeBlue, fontWeight = FontWeight.Bold)
+                                    Text(text = topic.topicName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CollegeNavy)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(text = "Learning Objectives:\n${topic.learningObjectives}", style = MaterialTheme.typography.bodySmall)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(text = "Faculty Notes: ${topic.teachingNotes}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
                     }
 
-                    items(result.topics) { topic ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(text = topic.unitTitle, style = MaterialTheme.typography.labelMedium, color = EmeraldSuccess, fontWeight = FontWeight.Bold)
-                                Text(text = topic.topicName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = "Objectives:\n${topic.learningObjectives}", style = MaterialTheme.typography.bodySmall)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = "Notes: ${topic.teachingNotes}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
+                    else -> {}
                 }
-
-                else -> {}
             }
         }
     }

@@ -81,6 +81,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.entity.SubjectEntity
 import com.example.data.entity.TimetableSlotEntity
+import com.example.ui.components.GlassCard
+import com.example.ui.components.GlassmorphicCanvas
+import com.example.ui.theme.CollegeBlue
+import com.example.ui.theme.CollegeNavy
+import com.example.ui.theme.EmeraldSuccess
 import kotlinx.coroutines.launch
 
 object TimetableConstants {
@@ -146,85 +151,88 @@ fun TimetableScreen(
         subjects.associateBy { it.id }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "My Timetable",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                shape = CircleShape,
-                                color = Color(0xFF10B981).copy(alpha = 0.15f),
-                                modifier = Modifier.padding(2.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+    GlassmorphicCanvas {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Faculty Timetable & Schedule",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = CollegeNavy
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    shape = CircleShape,
+                                    color = EmeraldSuccess.copy(alpha = 0.15f),
+                                    modifier = Modifier.padding(2.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = "Auto-saved",
-                                        tint = Color(0xFF059669),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Auto-saved",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF059669),
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Auto-saved",
+                                            tint = EmeraldSuccess,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Auto-saved",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = EmeraldSuccess,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
+                            Text(
+                                text = "University Lectures & Office Hours • Mon to Fri",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Text(
-                            text = "9:00 AM – 4:00 PM • Monday to Friday",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag("back_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More Options")
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Reset Entire Timetable") },
-                            leadingIcon = { Icon(Icons.Default.Clear, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                showResetConfirmDialog = true
-                            }
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("back_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showMenu = !showMenu }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More Options")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Reset Entire Timetable") },
+                                leadingIcon = { Icon(Icons.Default.Clear, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    showResetConfirmDialog = true
+                                }
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White.copy(alpha = 0.85f)
+                    )
                 )
-            )
-        }
-    ) { padding ->
+            }
+        ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -332,6 +340,7 @@ fun TimetableScreen(
             }
         )
     }
+}
 }
 
 /**

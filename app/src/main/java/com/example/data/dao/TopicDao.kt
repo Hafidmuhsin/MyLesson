@@ -14,6 +14,9 @@ interface TopicDao {
     @Query("SELECT * FROM topics WHERE subjectId = :subjectId ORDER BY orderIndex ASC, id ASC")
     fun getTopicsForSubject(subjectId: Long): Flow<List<TopicEntity>>
 
+    @Query("SELECT * FROM topics ORDER BY orderIndex ASC, id ASC")
+    fun getAllTopics(): Flow<List<TopicEntity>>
+
     @Query("SELECT * FROM topics WHERE subjectId = :subjectId ORDER BY orderIndex ASC, id ASC")
     suspend fun getTopicsForSubjectOneShot(subjectId: Long): List<TopicEntity>
 
