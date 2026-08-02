@@ -5,6 +5,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,7 @@ import com.example.util.GoogleDriveManager
 class MainActivity : ComponentActivity() {
 
     private val viewModel: TeacherViewModel by viewModels()
+    private lateinit var driveSignInLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,22 +55,8 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        setContent {
-            TeacherPlanTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    TeacherPlanApp(viewModel = viewModel)
-                }
-            }
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == GoogleDriveManager.REQ_SIGN_IN) {
-            val account = GoogleDriveManager.getSignedInAccountFromIntent(data)
+        driveSignInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val account = GoogleDriveManager.getSignedInAccountFromIntent(result.data)
             if (account != null) {
                 try {
                     val drive = GoogleDriveManager.createDriveService(this, account)
@@ -80,11 +69,27 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, "Drive sign-in canceled or failed", Toast.LENGTH_SHORT).show()
             }
         }
+
+        setContent {
+            TeacherPlanTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    TeacherPlanApp(
+                        viewModel = viewModel,
+                        onConnectDrive = {
+                            driveSignInLauncher.launch(GoogleDriveManager.getSignInIntent(this@MainActivity))
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun TeacherPlanApp(viewModel: TeacherViewModel) {
+fun TeacherPlanApp(viewModel: TeacherViewModel, onConnectDrive: () -> Unit) {
     val navController = rememberNavController()
     val subjects by viewModel.subjects.collectAsStateWithLifecycle()
     val timetableSlots by viewModel.timetableSlots.collectAsStateWithLifecycle()
@@ -127,9 +132,7 @@ fun TeacherPlanApp(viewModel: TeacherViewModel) {
                 onAddSubject = { name, grade, color, rolls, desc ->
                     viewModel.addSubject(name, grade, color, rolls, desc)
                 },
-                onConnectDrive = {
-                    startActivityForResult(GoogleDriveManager.getSignInIntent(this@MainActivity), GoogleDriveManager.REQ_SIGN_IN)
-                }
+                onConnectDrive = onConnectDrive
             )
         }
 
